@@ -16,4 +16,4 @@ Simply open the web app link and start transferring money.
 **Note:** Admin interface is private and managed separately.
 
 ## License
-[MIT License] (or whichever you prefer)
+[MIT License] 
