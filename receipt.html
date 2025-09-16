@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      padding: 20px;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+    h2, h3 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #007bff;
+    }
+    .receipt-details div {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    strong {
+      color: #333;
+    }
+    button {
+      display: block;
+      margin: 20px auto 0;
+      padding: 12px 20px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .notice {
+      margin-top: 25px;
+      color: red;
+      font-weight: bold;
+      text-align: center;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" id="receiptContainer">
+
+  <h2>🧾 Transaction Receipt</h2>
+
+  <div class="receipt-details">
+    <h3>Transaction Details</h3>
+    <div>Receipt Code-ပြေစာကုဒ်: <strong id="receiptCode">-</strong></div>
+    <div>Sender-ပေးပို့သူ: <strong id="senderName">-</strong> (<span id="senderPhone">-</span>)</div>
+    <div>Receiver: <strong id="receiverName">-</strong> (<span id="receiverPhone">-</span>)</div>
+    <div>Account/Bank Number-အကောင့်/ဘဏ်နံပါတ်: <strong id="accountNumber">-</strong></div>
+    <div>Transfer Type-လွှဲပြောင်းမှုအမျိုးအစား: <strong id="transferType">-</strong></div>
+    <div>City-မြို့နယ်: <strong id="city">-</strong></div>
+    <div>Amount-ပမာဏ (MYR): <strong id="amount">-</strong></div>
+    <div>Total-စုစုပေါင်း (MYR): <strong id="total">-</strong></div>
+    <div>Exchange Rate-ငွေလဲလှယ်နှုန်း: <strong id="exchangeRate">-</strong></div>
+    <div>MMK Received-ရရှိေငွ: <strong id="mmkAmount">-</strong></div>
+  </div>
+
+  <button id="paymentBtn" onclick="window.location.href='payment.html'">
+    💰 Make Payment to Department <br> ဌာနသို့ မလေရှား Ringgit လွဲငွေ အမောက်ပေးပို့ရန်
+  </button>
+  <button id="downloadBtn" onclick="downloadPDF()">📄 Download Receipt as PDF</button>
+
+  <div class="notice">
+    ⚠️ Please take a screenshot or download the receipt and send it to the Department.<br>
+    ⚠️ Also provide a screenshot of the Malaysia Ringgit transfer to the Department.<br>
+    Department Number: +601136196645<br>
+    Holder Name: Rafi<br><br>
+    ⚠️ လက်ခံစာကို screenshot သို့မဟုတ် PDF အဖြစ် သိမ်းပြီး ဌာနသို့ ပို့ရမည်။<br>
+    ⚠️ ဌာနသို့ ပေးပို့သော Malaysia Ringgit လွှဲငွေရန် screenshot ကိုလည်း တောင်းဆိုထားသည်။<br>
+    ဌာနဖုန်းနံပါတ်: +601136196645<br>
+    အမည်ပိုင်ရှင်: Rafi
+  </div>
+</div>
+
+<!-- Include libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// Get transaction data from URL or fallback to lastTransaction
+const params = new URLSearchParams(window.location.search);
+const receiptCode = params.get("receipt");
+let txn;
+
+if(receiptCode){
+  const transactions = JSON.parse(localStorage.getItem("transactions") || "[]");
+  txn = transactions.find(t => t.receiptCode === receiptCode) || {};
+} else {
+  txn = JSON.parse(localStorage.getItem("lastTransaction") || "{}");
+}
+
+// Fill receipt details
+document.getElementById("receiptCode").textContent = txn.receiptCode || "-";
+document.getElementById("senderName").textContent = txn.senderName || "-";
+document.getElementById("senderPhone").textContent = txn.senderPhone || "-";
+document.getElementById("receiverName").textContent = txn.receiverName || "-";
+document.getElementById("receiverPhone").textContent = txn.receiverPhone || "-";
+document.getElementById("accountNumber").textContent = txn.walletType === "Bank Transfer"
+  ? (txn.receiverBankNumber || "-")
+  : (txn.accountNumber || txn.receiverPhone || "-");
+document.getElementById("transferType").textContent = txn.walletType || "-";
+document.getElementById("city").textContent = txn.city || "-";
+document.getElementById("amount").textContent = txn.amount ? "RM " + parseFloat(txn.amount).toFixed(2) : "-";
+document.getElementById("total").textContent = txn.total ? "RM " + parseFloat(txn.total).toFixed(2) : "-";
+document.getElementById("mmkAmount").textContent = txn.mmkAmount ? parseInt(txn.mmkAmount).toLocaleString() + " MMK" : "-";
+document.getElementById("exchangeRate").textContent = txn.exchangeRate ? `1 MYR = ${txn.exchangeRate} MMK` : txn.mmkAmount ? `1 MYR = ${parseInt(txn.mmkAmount/txn.amount)} MMK` : "-";
+
+// PDF download function using html2canvas + jsPDF
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const container = document.getElementById("receiptContainer");
+  
+  // Hide buttons before generating PDF
+  const paymentBtn = document.getElementById("paymentBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  paymentBtn.style.display = "none";
+  downloadBtn.style.display = "none";
+  
+  html2canvas(container, { scale: 2 }).then(canvas => {
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF("p", "pt", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${txn.receiptCode || "receipt"}.pdf`);
+    
+    // Show buttons back after PDF is generated
+    paymentBtn.style.display = "block";
+    downloadBtn.style.display = "block";
+  });
+}
+</script>
+
+</body>
+</html>
