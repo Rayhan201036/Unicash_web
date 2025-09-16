@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Transfer - ငွေသားလွှဲပြောင်းခြင်း။</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; background: #f4f6f9; margin:0; padding:20px; display:flex; justify-content:center; }
+.container { background:#fff; padding:30px; border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.1); max-width:900px; width:100%; }
+h2 { text-align:center; color:#007bff; margin-bottom:20px; }
+.bank-select-wrapper { display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:25px; padding:15px; border-radius:15px; border:1px solid #cce0ff; background:#f0f7ff; flex-wrap:wrap; }
+.bank-select-wrapper select { padding:12px 15px; border-radius:12px; border:1px solid #007bff; font-size:15px; min-width:200px; }
+.bank-logo { max-height:50px; display:none; border-radius:8px; }
+
+.row { display:flex; flex-wrap:wrap; gap:20px; }
+.col { flex:1; min-width:280px; background:#f9f9f9; padding:20px; border-radius:12px; box-shadow:inset 0 0 10px rgba(0,0,0,0.03); }
+
+label { font-weight:600; display:block; margin-top:10px; font-size:14px; color:#444; }
+input, select { width:100%; padding:12px; margin-top:6px; border:1px solid #ccc; border-radius:10px; font-size:14px; }
+input:focus, select:focus { border-color:#007bff; box-shadow:0 0 8px rgba(0,123,255,0.2); }
+
+.transaction-box { display:grid; grid-template-columns:repeat(2,1fr); gap:15px; margin-top:20px; }
+.transaction-box input[readonly] { background:#e9f1ff; }
+
+.rate-display { text-align:center; font-weight:bold; font-size:16px; color:#007bff; margin:20px 0; }
+
+button { margin-top:25px; width:100%; padding:16px; background:#007bff; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:0.3s; }
+button:hover { background:#0056b3; }
+
+.section-title { font-size:18px; color:#007bff; margin-bottom:10px; border-bottom:1px solid #007bff; padding-bottom:5px; }
+
+@media(max-width:768px){ .row{ flex-direction:column; } .transaction-box{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+<h2>💵 Cash Pick Up Transfer - ငွေသားထုတ်ယူမှု</h2>
+
+<!-- Bank Selection -->
+<div class="bank-select-wrapper">
+  <select id="bankSelect" onchange="showBankLogo()" required>
+    <option value="">-- Select Bank - ဘဏ်ကိုရွေးပါ။ --</option>
+    <option value="KBZ Bank">KBZ Bank</option>
+    <option value="CB Bank">CB Bank</option>
+    <option value="Yoma Bank">Yoma Bank</option>
+    <option value="AYA Bank">AYA Bank</option>
+    <option value="ကမ္ဘာရတနာဘဏ်">ကမ္ဘာရတနာဘဏ်</option>
+  </select>
+  <img id="bankLogo" class="bank-logo" alt="Bank Logo">
+</div>
+
+<div class="row">
+  <div class="col">
+    <h3 class="section-title">👤 Sender Details</h3>
+    <label for="senderName">Sender Name-ပေးပို့သူအမည်</label>
+    <input type="text" id="senderName" placeholder="Enter sender's full name" required>
+    <label for="senderPhone">Sender Phone-ပေးပို့သူ ဖုန်း</label>
+    <input type="text" id="senderPhone" placeholder="+60XXXXXXXXX" required>
+  </div>
+  <div class="col">
+    <h3 class="section-title">🎯 Receiver Details</h3>
+    <label for="receiverName">Receiver Name-လက်ခံသူအမည်</label>
+    <input type="text" id="receiverName" placeholder="Enter receiver's full name" required>
+    <label for="receiverPhone">Receiver Phone-လက်ခံသူဖုန်း</label>
+    <input type="text" id="receiverPhone" placeholder="+95XXXXXXXXX" required>
+    <label for="receiverCity">City-မြို့နယ်</label>
+    <input type="text" id="receiverCity" placeholder="Enter city" required>
+    <label for="receiverID">Receiver National ID-နိုင်ငံသားစီစစ်ရေးခံယူပါ။</label>
+    <input type="text" id="receiverID" placeholder="Enter ID number" required>
+  </div>
+</div>
+
+<div class="rate-display" id="currentRate"></div>
+
+<div class="transaction-box">
+  <div>
+    <label for="amount">Amount-ပမာဏ (MYR)</label>
+    <input type="number" id="amount" placeholder="Enter amount" oninput="calculateTotal()">
+  </div>
+  <div>
+    <label for="charges">Service Charge-ဝန်ဆောင်ခ (MYR)</label>
+    <input type="text" id="charges" readonly>
+  </div>
+  <div>
+    <label for="total">Total-စုစုပေါင်း(MYR)</label>
+    <input type="text" id="total" readonly>
+  </div>
+  <div>
+    <label for="mmkAmount">MMK Received-လက်ခံရရှိေငွ</label>
+    <input type="text" id="mmkAmount" readonly>
+  </div>
+</div>
+
+<button onclick="submitCash()">Proceed-ရှေ့ဆက်ပါ➡️</button>
+</div>
+
+<script>
+const SERVICE_CHARGE = 10;
+let EXCHANGE_RATE = parseFloat(localStorage.getItem("exchangeRate")) || 520;
+document.getElementById("currentRate").textContent = `💱 Current Rate: 1 MYR = ${EXCHANGE_RATE} MMK`;
+
+function calculateTotal() {
+  let amount = parseFloat(document.getElementById("amount").value) || 0;
+  document.getElementById("charges").value = SERVICE_CHARGE.toFixed(2);
+  document.getElementById("total").value = (amount + SERVICE_CHARGE).toFixed(2);
+  document.getElementById("mmkAmount").value = (amount * EXCHANGE_RATE).toLocaleString();
+}
+
+function showBankLogo() {
+  const bank = document.getElementById("bankSelect").value;
+  const bankLogo = document.getElementById("bankLogo");
+  if(bank==="KBZ Bank") bankLogo.src="https://tinyurl.com/4s36j8we";
+  else if(bank==="CB Bank") bankLogo.src="https://www.cbbank.com.mm/sites/cbbank.com.mm/files/cbbank-og-image.jpg";
+  else if(bank==="Yoma Bank") bankLogo.src="https://tinyurl.com/36ww4xzw";
+  else if(bank==="AYA Bank") bankLogo.src="https://eu-images.contentstack.com/v3/assets/blt7dacf616844cf077/bltc93fa8d8220b8cae/67998a9a458136310bb5e912/AYA-Bank-logo.png?disable=upscale&width=1200&height=630&fit=crop";
+  else if(bank==="ကမ္ဘာရတနာဘဏ်") bankLogo.src="data:image/png;base64,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"; // sample logo link
+  else bankLogo.style.display="none";
+  bankLogo.style.display = bank ? "block" : "none";
+}
+
+function submitCash() {
+  const sender = { 
+    name: document.getElementById("senderName").value, 
+    phone: document.getElementById("senderPhone").value 
+  };
+  const receiver = { 
+    name: document.getElementById("receiverName").value, 
+    phone: document.getElementById("receiverPhone").value,
+    city: document.getElementById("receiverCity").value,
+    id: document.getElementById("receiverID").value,
+    bank: document.getElementById("bankSelect").value
+  };
+  const amount = parseFloat(document.getElementById("amount").value) || 0;
+
+  if(!sender.name || !sender.phone || !receiver.name || !receiver.phone || !receiver.city || !receiver.id || !receiver.bank || amount <=0){
+    alert("⚠️ Please fill all required fields correctly!");
+    return;
+  }
+
+  const transaction = {
+    receiptCode: "RCPT" + Date.now(),
+    type: receiver.bank,
+    senderName: sender.name,
+    senderPhone: sender.phone,
+    receiverName: receiver.name,
+    receiverPhone: receiver.phone,
+    city: receiver.city,
+    receiverID: receiver.id,
+    walletType: "Cash",
+    amount: amount,
+    total: amount + SERVICE_CHARGE,
+    mmkAmount: amount * EXCHANGE_RATE,
+    status: "In Process",
+    date: new Date().toLocaleString()
+  };
+
+  let transactions = JSON.parse(localStorage.getItem("transactions") || "[]");
+  transactions.push(transaction);
+  localStorage.setItem("transactions", JSON.stringify(transactions));
+
+  localStorage.setItem('lastTransaction', JSON.stringify(transaction));
+  window.location.href = "receipt.html";
+}
+</script>
+</body>
+</html>
